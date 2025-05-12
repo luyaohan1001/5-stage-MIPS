@@ -33,11 +33,11 @@ wire [5:0] entry_addr = update ? (branchUpdatePC[7:0] >> 2) : (branching_address
 // Predict the PC based on the entries
 assign predictPC = (access) ? entries[entry_addr][31:0] : 32'b0;
 assign found = (entries[entry_addr][31:0] != -1) && access;
+integer i;
 
 always @(posedge clk or posedge reset) begin
     if (reset) begin
         // Reset logic: initialize all entries
-        integer i;
         for (i = 0; i < 64; i = i + 1) begin
             entries[i] <= -34'd1;  // Initialize all entries to -1 (invalid)
         end

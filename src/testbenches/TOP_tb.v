@@ -8,7 +8,7 @@ module TOP_tb();
 
 reg reset,clk;
 
-datapath mips(.clk(clk), .reset(reset));
+umips_top umips_top(.clk(clk), .reset(reset));
 
 initial begin
 	clk = 1;
@@ -16,11 +16,26 @@ initial begin
 end
 
 initial begin
-	reset = 1;
-	#5;		//reset at 5ns.
 	reset = 0;
-	//#200;
+	#10;
+	reset = 1;
+	#10;		//reset at 5ns.
+	reset = 0;
 end
+
+// Waveform generation
+initial begin
+    $dumpfile("test.vcd");  // Specify the VCD file to store the waveform
+		$dumpvars(0, umips_top);
+		$dumpvars;
+end
+
+// End simulation after 1000 time units
+initial begin
+    #1000;
+    $finish;
+end
+
 
 endmodule
 

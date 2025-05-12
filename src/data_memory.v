@@ -7,7 +7,7 @@ module data_memory(
     output reg [127:0] read_data
 );
 
-    reg [31:0] mem [0:4294967295]; // 32-bit memory array (4GB address space)
+    reg [31:0] mem [0:65535]; // 32-bit memory array (4GB address space)
     reg [127:0] read_buffer;        // Buffer to hold the data to be read
 
     // Sequential block for read/write operations

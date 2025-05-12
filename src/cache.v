@@ -72,13 +72,13 @@ module cache(
         end
     end
 
-    // Counting logic (example of cache accesses)
-    always @(posedge clk) begin
-        if (reset) begin
-            countR <= 5'b0; // Reset counter on reset
-        end else if (read_in || write_in) begin
-            countR <= countR + 1; // Increment counter on cache accesses
-        end
-    end
+    // // Counting logic (example of cache accesses)
+    // always @(posedge clk) begin
+    //     if (reset) begin
+    //         countR <= 5'b0; // Reset counter on reset
+    //     end else if (read_in || write_in) begin
+    //         countR <= countR + 1; // Increment counter on cache accesses
+    //     end
+    // end
 
 endmodule

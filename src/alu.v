@@ -63,8 +63,6 @@ The instruction looks like:
 1101
 1110
 1111
-
-
 j, bne,beq address is added using an isolated adder
 */
 
