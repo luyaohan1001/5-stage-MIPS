@@ -2,8 +2,8 @@
 
 module Pipeline_RegFD(
   input CLK,reset,
-  input [31:0] InstrF,
-  output [31:0] InstrD,
+  input [31:0] fetch_decode_instruction_word_input,
+  output [31:0] fetch_decode_instruction_word_output,
   input [31:0] PCplus4F,
   output [31:0] PCplus4D,
   input nEN
@@ -16,12 +16,12 @@ always@(posedge CLK) begin
     InstrFD <= 32'b0;
     PCplus4FD <= 32'b0;
   end else if (nEN == 1'b0) begin
-    InstrFD <= InstrF;
+    InstrFD <= fetch_decode_instruction_word_input;
     PCplus4FD <= PCplus4F;
   end
 end
 
-assign InstrD = InstrFD;
+assign fetch_decode_instruction_word_output = InstrFD;
 assign PCplus4D = PCplus4FD;
 
 endmodule

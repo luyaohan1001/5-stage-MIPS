@@ -2,27 +2,29 @@ module umips_top(
   input clk,
   input reset);
 
+
   /* FETCH STAGE */
+
   wire [31:0] branch_mux_out,jump_mux_out, BranchAddr,JumpAddr;
-  reg [31:0] PCplus4_out;
+  reg [31:0] PC_PLUS4_FLOP;
+
   //branch MUX
-  wire [31:0] InstrD;
   wire branch_mux_ctrl;
   wire BranchD;
-  assign branch_mux_out = branch_mux_ctrl? BranchAddr:PCplus4_out;
+  assign branch_mux_out = branch_mux_ctrl? BranchAddr : PC_PLUS4_FLOP;
   //jump MUX
   wire se_ze;
   assign jump_mux_out =   se_ze?  JumpAddr: branch_mux_out;
 
-  //prepare jump address
+  // prepare jump address
   wire [25:0] JumpAddrRaw;
-  assign JumpAddrRaw = InstrD[25:0];
+  assign JumpAddrRaw = instruction_word_decode_stage_wire[25:0];
   assign JumpAddr = {6'b000000,JumpAddrRaw<<2};
 
   //program counter
-  reg [31:0] PC_r;
-  wire [31:0] PC_out;
-  assign PC_out = PC_r;
+  reg [31:0] PC_FLOP;
+  wire [31:0] pc_wire;
+  assign pc_wire = PC_FLOP;
 
   //cache enable
   wire mem_access_status; // when data loading, 0 when not
@@ -32,6 +34,7 @@ module umips_top(
   wire MemWriteD,MemWriteE,MemWriteM, MemReadD, MemReadE, MemReadM;
 
   reg FD_MemStall;
+  
   /*
   The FD_MemStall doesn't solely decides if the pipeline will stall.
   The following logic includes the signal FD_nEN:
@@ -99,56 +102,61 @@ module umips_top(
 
   always @(posedge clk or posedge reset) begin
       if (reset) begin
-          // On reset, set PC_r to 0
-          PC_r <= 32'b0;
+          // On reset, set PC_FLOP to 0
+          PC_FLOP <= 32'b0;
       end else begin
-          // When reset is not active, update PC_r based on nPC_EN
+          // When reset is not active, update PC_FLOP based on nPC_EN
           if (nPC_EN == 0) begin
-              PC_r <= jump_mux_out; // Update PC_r with jump_mux_out when nPC_EN is 0
+              PC_FLOP <= jump_mux_out; // Update PC_FLOP with jump_mux_out when nPC_EN is 0
           end
       end
   end
 
-  //PC+4 adder
-  always@(posedge reset)begin		//when reset/at inital, we initialize the value of PC out so that the signals are defined
-    PCplus4_out = 32'b0;
+// On each clock, PC_PLUS4_FLOP increment by 4.
+always @(posedge clk or posedge reset) begin
+  if (reset) begin
+    PC_PLUS4_FLOP <= 32'b0;
+  end else begin
+    if (clk) begin
+      PC_PLUS4_FLOP <= PC_PLUS4_FLOP + 32'h4;
+    end
   end
-  always@(negedge clk)begin
-    PCplus4_out = PC_out + 32'h4;
-  end
+end
 
-  wire[31:0] InstrF;
-  instr_memory instr_memory(	//declare instance of the instruction memory
-    .address(PC_out),
-    .read_data(InstrF)
+  wire[31:0] instruction_word_fetch_stage_wire;
+
+  /* Access IMEM base on PC counter */
+  instr_memory instr_memory(
+    .address(pc_wire),
+    .read_data(instruction_word_fetch_stage_wire)
   );
-
 
 
   //pipeline reg
   wire [31:0] PCplus4D;
+  wire [31:0] instruction_word_decode_stage_wire;
   Pipeline_RegFD pipeline_regFD(		//declare the instance of pipeline register at Fetech-Decode stage
     .CLK(clk),
     .reset(reset),
-    .InstrF(InstrF),
-    .InstrD(InstrD),
-    .PCplus4F(PCplus4_out),
+    .fetch_decode_instruction_word_input(instruction_word_fetch_stage_wire),
+    .fetch_decode_instruction_word_output(instruction_word_decode_stage_wire),
+    .PCplus4F(PC_PLUS4_FLOP),
     .PCplus4D(PCplus4D),
     .nEN(FD_nEN)
   );
 
   /* DECODE STAGE */
-  //InstrD spliter
+  //instruction_word_decode_stage_wire spliter
   wire [5:0] InstrD5_0;		//splits the instruction in different section so that debug is easy
   wire [5:0] InstrD31_26;
   wire [4:0] InstrD15_11;
   wire [4:0] InstrD20_16;
   wire [4:0] InstrD25_21;
-  assign InstrD5_0   = InstrD[5:0];
-  assign InstrD31_26 = InstrD[31:26];
-  assign InstrD15_11 = InstrD[15:11];
-  assign InstrD20_16 = InstrD[20:16];
-  assign InstrD25_21 = InstrD[25:21];
+  assign InstrD5_0   = instruction_word_decode_stage_wire[5:0];
+  assign InstrD31_26 = instruction_word_decode_stage_wire[31:26];
+  assign InstrD15_11 = instruction_word_decode_stage_wire[15:11];
+  assign InstrD20_16 = instruction_word_decode_stage_wire[20:16];
+  assign InstrD25_21 = instruction_word_decode_stage_wire[25:21];
 
   wire [3:0] ALUControlD;
   wire [1:0] Out_selectD;
@@ -195,7 +203,7 @@ module umips_top(
 
   //Sign Extend
   wire [15:0] ImmRaw;
-  assign ImmRaw = InstrD[15:0];
+  assign ImmRaw = instruction_word_decode_stage_wire[15:0];
   wire [31:0] SignImmD,SignImmE;
   assign SignImmD = { {16{ImmRaw[15]}}, ImmRaw };
 
@@ -236,7 +244,7 @@ module umips_top(
   Pipeline_RegDE pipeline_regDE(
     .CLK(clk),.reset(reset),
     .nEN(1'b0), //MemReadE starts one cycle earlier detecing cache access
-    .InstrD(InstrD), .InstrE(InstrE),
+    .instruction_word_decode_stage_wire(instruction_word_decode_stage_wire), .InstrE(InstrE),
     .MemReadD(MemReadD),    .MemReadE(MemReadE),
     .RegWriteD(RegWriteD),  .RegWriteE(RegWriteE),
     .MemtoRegD(MemtoRegD),  .MemtoRegE(MemtoRegE),

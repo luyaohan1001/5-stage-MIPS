@@ -4,7 +4,7 @@ module Pipeline_RegDE(
   input CLK,
   input reset,
   input nEN,
-  input [31:0] InstrD,
+  input [31:0] instruction_word_decode_stage_wire,
   output [31:0] InstrE,
   input MemReadD,
   output MemReadE,
@@ -78,7 +78,7 @@ module Pipeline_RegDE(
       RdDE            <= 5'b0;
       SignImmDE       <= 32'b0;
     end else if (nEN == 1'b0) begin
-      instrDE         <= InstrD;
+      instrDE         <= instruction_word_decode_stage_wire;
       MemReadDE       <= MemReadD;
       RegWriteDE      <= RegWriteD;
       MemtoRegDE      <= MemtoRegD;

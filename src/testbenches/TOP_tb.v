@@ -27,7 +27,6 @@ end
 initial begin
     $dumpfile("test.vcd");  // Specify the VCD file to store the waveform
 		$dumpvars(0, umips_top);
-		$dumpvars;
 end
 
 // End simulation after 1000 time units
